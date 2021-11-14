@@ -505,12 +505,12 @@ def plot_to_image(image: Image, imgx: int, imgy: int, width: int,
     # min and max values for this cartridge
     inkvalues = [
         ["#000000", "#ffffff"], # black
-        ["#ff0000", "#ffffff"], # magenta
-        ["#0000ff", "#ffffff"], # cyan
+        ["#ff00ff", "#ffffff"], # magenta
+        ["#00ffff", "#ffffff"], # cyan
         ["#000000", "#ffffff"], # ????
-        ["#00ff00", "#ffffff"], # yellow
-        ["#888888", "#ffffff"], # alternate black
-        ["#444444", "#ffffff"], # alternate black
+        ["#ffff00", "#ffffff"], # yellow
+        ["#111111", "#ffffff"], # alternate black
+        ["#222222", "#ffffff"], # alternate black
     ]
 
     for py in range(int(height)):
@@ -644,23 +644,21 @@ with open("out.epson", "rb") as instream:
             print("{}".format(printinfo["color"]), end="", file=sys.stderr)
 
 
+            # Add those random offsets to certain ink types
+            # The row count is 60, and they are multiples of the row count, so they
+            # probably are related
+            #
+            # Probably the printer process them 4 lines at a time?
             if printinfo["color"] == 5:
                 extraY = -120
             elif printinfo["color"] == 6:
                 extraY = -240
             elif printinfo["color"] == 1:
                 extraY = -120
-            elif printinfo["color"] == 2:
-                extraY = -60
             elif printinfo["color"] == 4:
                 extraY = -240
             else:
                 extraY = 0
-
-#            if previous_color == 2 and printinfo["color"] != 0:
-#                extraY += 80
-#            else:
-#                extraY += 0
 
             # Width of the row, in hunits.
             rowwidth = printinfo["bytesline"] * 8 / printinfo["bpp"]
