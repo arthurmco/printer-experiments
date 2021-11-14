@@ -250,6 +250,7 @@ def eval_command(cmd: Command, state):
             graphics = False
             remote = False
             printing = False
+            print(" ", end="", file=sys.stderr)
 
         elif cmd.name == "(R" and cmd.parameters == b'\x00REMOTE1':
             print("Entering remote mode.")
@@ -302,7 +303,7 @@ def eval_command(cmd: Command, state):
                 "unidirectional" if cmd.parameters[0] == 1 else "bidirectional"
             ))
 
-        elif cmd.name == "(d":    
+        elif cmd.name == "(d":
             # We have a (d command, but omitting it caused no changes to the actual
             # printing process.
             print("Unknown command (d with params len {}",
@@ -385,7 +386,7 @@ def eval_command(cmd: Command, state):
             print("nozzle distance (in inches): vertical=1/{}, horizontal=1/{}".format(
                 nozzle_horizontal, nozzle_vertical
             ))
-            
+
             # What exactly is this above?
 
 
@@ -409,6 +410,7 @@ def eval_command(cmd: Command, state):
                 headtop = state["headtop"] + feed
             )
 
+            print("\n{:04d}| ".format(state["headtop"]), end="", file=sys.stderr)
             print("<< Head is now at pageunit {} {} >>".format(state["headtop"], state["headleft"]))
 
 
@@ -507,10 +509,10 @@ def plot_to_image(image: Image, imgx: int, imgy: int, width: int,
         ["#0000ff", "#ffffff"], # cyan
         ["#000000", "#ffffff"], # ????
         ["#00ff00", "#ffffff"], # yellow
-        ["#ffff00", "#ffffff"], # alternate black
-        ["#ff00ff", "#ffffff"], # alternate black
+        ["#888888", "#ffffff"], # alternate black
+        ["#444444", "#ffffff"], # alternate black
     ]
-    
+
     for py in range(int(height)):
         for px in range(int(width)):
             offset = math.ceil((py*width+px))
@@ -536,26 +538,29 @@ def plot_to_image(image: Image, imgx: int, imgy: int, width: int,
             cartridge = inkvalues[inkcolor]
             color = generate_color(cartridge[0], cartridge[1], proportion)
 
-            
+
             try:
-                r, g, b = image.getpixel((imgx+px, imgy+py))
-                
+                r, g, b = image.getpixel((imgx+px, imgy+(py*2)))
+
                 # emulate printing on paper
                 # on printer world, colors subtract, not add
                 r -= 255-color[0]
                 g -= 255-color[1]
                 b -= 255-color[2]
-                
-                image.putpixel((imgx+px, imgy+py), (r, g, b))
-                
+
+                image.putpixel((imgx+px, imgy+(py*2)), (r, g, b))
+
+                if py < height-1:
+                    image.putpixel((imgx+px, imgy+(py*2)+1), (r, g, b))
+
 #                if py == 0:
 #                    image.putpixel((imgx+px, imgy+py), (127, 0, 0))
 #
 #                if py == height-1:
 #                    image.putpixel((imgx+px, imgy+py), (0, 0, 127))
-                    
-                
-            except IndexError:                
+
+
+            except IndexError:
                 continue
 
 
@@ -584,7 +589,7 @@ with open("out.epson", "rb") as instream:
         headleft=0,
 
         previous_color=None,
-        
+
         # How much the head will walk after each draw operation
         headstep=0
     )
@@ -625,8 +630,6 @@ with open("out.epson", "rb") as instream:
 
 
                     data += decode_packbits(recv)
-#                    import time; time.sleep(0.01)
-#                    print(hex(instream.tell()), len(data), toread)
 
             print("\tNow position is {:04x}".format(instream.tell()))
             print("\tPrinting data: ", len(data))
@@ -635,17 +638,30 @@ with open("out.epson", "rb") as instream:
 
             vert_spacing = 80
 
-            
+
             previous_color = state["previous_color"]
 
-            if previous_color == 5:
-                extraY = 60
+            print("{}".format(printinfo["color"]), end="", file=sys.stderr)
+
+
+            if printinfo["color"] == 5:
+                extraY = -120
+            elif printinfo["color"] == 6:
+                extraY = -240
+            elif printinfo["color"] == 1:
+                extraY = -120
+            elif printinfo["color"] == 2:
+                extraY = -60
+            elif printinfo["color"] == 4:
+                extraY = -240
             else:
                 extraY = 0
 
-            if printinfo["color"] == 1:
-                extraY -= 120
-                
+#            if previous_color == 2 and printinfo["color"] != 0:
+#                extraY += 80
+#            else:
+#                extraY += 0
+
             # Width of the row, in hunits.
             rowwidth = printinfo["bytesline"] * 8 / printinfo["bpp"]
             rowheight = printinfo["lines"]
@@ -660,8 +676,7 @@ with open("out.epson", "rb") as instream:
 
             # state["headleft"] += rowwidth
             state["previous_color"] = printinfo["color"]
-                
-                
+
             continue
 
 
@@ -675,7 +690,8 @@ with open("out.epson", "rb") as instream:
             break
 
         if char == b'\x1b' and remote is False:
-            print("command incoming (at pos {0} ({0:02x}))".format(instream.tell()), file=sys.stderr)
+            pass
+            #print("command incoming (at pos {0} ({0:02x}))".format(instream.tell()), file=sys.stderr)
         else:
             command_buf += char
 
