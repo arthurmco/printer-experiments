@@ -649,6 +649,7 @@ with open("out.epson", "rb") as instream:
             # probably are related
             #
             # Probably the printer process them 4 lines at a time?
+            # Or it has different starting offsets for each color (this actually makes more sense)
             if printinfo["color"] == 5:
                 extraY = -120
             elif printinfo["color"] == 6:
